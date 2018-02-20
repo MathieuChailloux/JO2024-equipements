@@ -1,0 +1,32 @@
+create table zone_couverte
+(
+  eqtid integer,
+  closestid integer,
+  geom geometry(POLYGON,4326)
+)
+WITH (
+  OIDS=FALSE
+);
+ALTER TABLE zone_couverte
+  OWNER TO postgres;
+
+truncate table zone_couverte;
+
+insert into zone_couverte
+select pap.eqtid, pap.closestid, st_convexhull(st_collect(array_agg(v.the_geom))) as geom
+from points_atteignables_paris pap, reseau_route_vertices_pgr v
+where pap.reachedid = v.id
+group by eqtid, closestid
+having count(*) > 2;
+
+--select * from zone_couverte;
+
+update zone_couverte
+set geom =
+	(select
+	  case
+	    when st_within(e.geom,zone_couverte.geom) then zone_couverte.geom
+	    else st_snap(zone_couverte.geom,e.geom,400)
+	  end
+	from equipement_paris e
+	where zone_couverte.eqtid = e.gid)

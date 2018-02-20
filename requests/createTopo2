@@ -1,0 +1,37 @@
+create extension pgrouting
+
+create table reseau_route (
+	id integer,
+	geom geometry(MultiLineString,4326),
+	source integer,
+	target integer,
+	cost float,
+	reverse_cost float,
+	constraint reaseau_route_pkey primary key(id));
+
+truncate table reseau_route
+
+insert into reseau_route (id, geom, cost, reverse_cost)
+	select gid, ST_Force2D(geom), st_length(ST_Force2D(geom)::geography), st_length(ST_Force2D(geom)::geography) from route_4326;
+
+select distinct cost from reseau_route order by cost desc
+select distinct st_length(geom::geography) from reseau_route
+
+select * from reseau_route
+
+/*ALTER TABLE reseau_route
+ ALTER COLUMN geom type geometry(MultiLineString,4326)
+   USING ST_Force2D(geom);*/
+
+truncate reseau_route_vertices_pgr
+
+select pgr_createTopology('reseau_route',1,the_geom:='geom',id:='id',source:='source',target:='target');
+
+select pgr_analyzeGraph('reseau_route',0.001,the_geom:='geom');
+
+create index source_idx on reseau_route("source");
+create index target_idx on reseau_route("target");
+
+select * from reseau_route_vertices_pgr
+
+select * from pgr_drivingdistance('select id, source, target, cost from reseau_route',10,100000,false,false)

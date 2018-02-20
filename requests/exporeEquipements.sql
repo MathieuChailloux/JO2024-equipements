@@ -1,0 +1,1 @@
+﻿select eqt_fam, eqt_type, eqt_pro from equipements
